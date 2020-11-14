@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"github.com/jung-kurt/gofpdf"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -32,6 +34,8 @@ func loremList() []string {
 func getPdfName() string{
 	path := GetCurrentPath()
 	pdfPath := path + "\\hello.pdf"
+	pdfPath ="g:\\2222222.pdf"
+	os.Remove(pdfPath)
 	return pdfPath
 }
 //func ExampleFpdf_CellFormat_tables() {
@@ -280,42 +284,171 @@ func ExampleFpdf_SplitLines_tables() {
 	// Successfully generated pdf/Fpdf_SplitLines_tables.pdf
 }
 
+func ExampleFpdf_MultiCell() {
+	filePath := "g:\\hello111.pdf"
+	os.Remove(filePath)
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	titleStr := "20000 Leagues Under the Seas"
+	pdf.SetTitle(titleStr, false)
+	pdf.SetAuthor("Jules Verne", false)
+	pdf.SetHeaderFunc(func() {
+		// Arial bold 15
+		pdf.SetFont("Arial", "B", 15)
+		// Calculate width of title and position
+		wd := pdf.GetStringWidth(titleStr) + 6
+		pdf.SetX((210 - wd) / 2)
+		// Colors of frame, background and text
+		pdf.SetDrawColor(0, 80, 180)
+		pdf.SetFillColor(230, 230, 0)
+		pdf.SetTextColor(220, 50, 50)
+		// Thickness of frame (1 mm)
+		pdf.SetLineWidth(1)
+		// Title
+		pdf.CellFormat(wd, 9, titleStr, "1", 1, "C", true, 0, "")
+		// Line break
+		pdf.Ln(10)
+	})
+	pdf.SetFooterFunc(func() {
+		// Position at 1.5 cm from bottom
+		pdf.SetY(-15)
+		// Arial italic 8
+		pdf.SetFont("Arial", "I", 8)
+		// Text color in gray
+		pdf.SetTextColor(128, 128, 128)
+		// Page number
+		pdf.CellFormat(0, 10, fmt.Sprintf("Page %d", pdf.PageNo()),
+			"", 0, "C", false, 0, "")
+	})
+
+
+	pdf.OutputFileAndClose(filePath)
+
+}
+
 
 func main() {
+
+	//ExampleFpdf_MultiCell()
 	//ExampleFpdf_SplitLines_tables()
-	filePath := getPdfName()
+	const (
+		colCount = 5
+		colWd    = 30.0
+		marginH  = 15.0
+		lineHt   = 5.5
+		cellGap  = 2.0
+	)
+
+
+	//filePath := getPdfName()
+	filePath := "g:\\hello.pdf"
 	os.Remove(filePath)
 	path := GetCurrentPath()
-	simsunttf := path + "\\simsun.ttf"
+
 	var pdf *gofpdf.Fpdf
 	pdf = gofpdf.New("P", "mm", "A4", "")
+	pdf.SetMargins(marginH, 15, marginH)
+
+	//宋体
+	simsunttf := path + "\\simsun.ttf"
+	pdf.AddUTF8Font("chinafont","",simsunttf)
+	//宋体粗体
+	songblod := path + "\\simsunblod.ttf"
+	pdf.AddUTF8Font("songblod","",songblod)
+
+	pdf.SetFont("chinafont", "", 20)
 	pdf.AddPage()
 
-	pdf.AddUTF8Font("chinafont","",simsunttf)
+	//标题
+	titleStr :="CJK1型号地板卡测试报告"
+	wd := pdf.GetStringWidth(titleStr) + 6
+	pdf.SetX((210 - wd) / 2)
+	pdf.CellFormat(wd, 6, titleStr, "0", 0, "C", false, 0, "")
+	pdf.Ln(-1)
+	pdf.Ln(-1)
+	pdf.Ln(-1)
+
+
+	pdf.SetFont("chinafont", "", 14)
+	//工号
+	pdf.SetX((210 - colWd*5) / 2)
+	pdf.CellFormat(colWd, 10, "工号", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd*4, 10, "3424334", "1", 0, "CM", false, 0, "")
+	pdf.Ln(-1)
+	//版序号
+	pdf.SetX((210 - colWd*5) / 2)
+	pdf.CellFormat(colWd, 10, "版序号", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd*4, 10, "3424334", "1", 0, "CM", false, 0, "")
+	pdf.Ln(-1)
+
+	//产品型号
+	pdf.SetX((210 - colWd*5) / 2)
+	pdf.CellFormat(colWd, 10, "产品型号", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
+	pdf.Ln(-1)
+
+	//产品图号
+	pdf.SetX((210 - colWd*5) / 2)
+	pdf.CellFormat(colWd, 10, "产品图号", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
+	pdf.Ln(-1)
+
+	//测试员
+	pdf.SetX((210 - colWd*5) / 2)
+	pdf.CellFormat(colWd, 10, "测试员", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd*4, 10, "3424334", "1", 0, "CM", false, 0, "")
+	pdf.Ln(-1)
+	//测试时间
+	pdf.SetX((210 - colWd*5) / 2)
+	pdf.CellFormat(colWd, 10, "测试时间", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd*4, 10, "3424334", "1", 0, "CM", false, 0, "")
+	pdf.Ln(-1)
+	//测试结论
+	pdf.SetX((210 - colWd*5) / 2)
+	pdf.CellFormat(colWd, 10, "测试结论", "1", 0, "CM", false, 0, "")
+	pdf.SetFillColor(0, 128, 0)
+	pdf.CellFormat(colWd*4, 10, "3424334", "1", 0, "CM", true, 0, "")
+	pdf.Ln(-1)
+
+	pdf.SetFont("songblod", "", 16)
+	zukang := "阻抗测试"
+	zukangwd := pdf.GetStringWidth(zukang) + 6
+	pdf.SetX((210 - zukangwd) / 2)
+	pdf.CellFormat(zukangwd, 10, zukang, "0", 0, "CM", false, 0, "")
+	pdf.Ln(-1)
+
+
 	pdf.SetFont("chinafont", "", 16)
+	header := [colCount]string{"序号", "测试内容", "正确范围", "测量值", "结果"}
+	// Headers
+	pdf.SetX((210 - colWd*5) / 2)
+	for colJ := 0; colJ < colCount; colJ++ {
+		pdf.CellFormat(colWd, 10, header[colJ], "1", 0, "CM", false, 0, "")
+	}
+	pdf.Ln(-1)
+	//pdf.SetLineWidth(1)
+	//内容
+	for colJ :=0; colJ<10; colJ++{
+		serial := strconv.Itoa(colJ+1)
+		pdf.SetX((210 - colWd*5) / 2)
+		pdf.CellFormat(colWd, 6, serial, "1", 0, "CM", false, 0, "")
+		pdf.CellFormat(colWd, 6, "aa2", "1", 0, "CM", false, 0, "")
+		pdf.CellFormat(colWd, 6, "aa3", "1", 0, "CM", false, 0, "")
+		pdf.CellFormat(colWd, 6, "aa4", "1", 0, "CM", false, 0, "")
+		//pdf.SetTextColor(224, 224, 224)
+		pdf.SetFillColor(0, 128, 0)
+		pdf.CellFormat(colWd, 6, "aa4", "1", 0, "CM", true, 0, "")
+		pdf.Ln(-1)
+	}
 
-	pdf.Cell(10, 10, "Hello, world我是中国人1233")
 	pdf.Ln(-1)
 
-	//第一行
-	pdf.SetX(10)
-	pdf.CellFormat(40, 6, "aa1", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(40, 6, "aa2", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(40, 6, "aa3", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(40, 6, "aa4", "1", 0, "C", false, 0, "")
-	pdf.Ln(-1)
 
-	//第二行
-	pdf.SetX(10)
-	pdf.CellFormat(40, 6, "aa1", "1", 0, "", false, 0, "")
-	pdf.CellFormat(40, 6, "aa2", "1", 0, "", false, 0, "")
-	pdf.CellFormat(40, 6, "aa3", "1", 0, "", false, 0, "")
-	pdf.CellFormat(40, 6, "aa4", "1", 0, "", false, 0, "")
-	pdf.Ln(-1)
-
-
-	//pdf.Cell(10, 10, "Hello, world我是中国人1233")
-	//pdf.Cell(20, 20, "阿斯顿法国红酒看来")
 
 
 
