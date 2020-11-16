@@ -326,10 +326,9 @@ func ExampleFpdf_MultiCell() {
 }
 
 
+
 func main() {
 
-	//ExampleFpdf_MultiCell()
-	//ExampleFpdf_SplitLines_tables()
 	const (
 		colCount = 5
 		colWd    = 30.0
@@ -416,7 +415,7 @@ func main() {
 	pdf.Ln(-1)
 
 	pdf.SetFont("songblod", "", 16)
-	zukang := "阻抗测试"
+	zukang := "电压测试"
 	zukangwd := pdf.GetStringWidth(zukang) + 6
 	pdf.SetX((210 - zukangwd) / 2)
 	pdf.CellFormat(zukangwd, 10, zukang, "0", 0, "CM", false, 0, "")
@@ -431,7 +430,7 @@ func main() {
 		pdf.CellFormat(colWd, 10, header[colJ], "1", 0, "CM", false, 0, "")
 	}
 	pdf.Ln(-1)
-	//pdf.SetLineWidth(1)
+
 	//内容
 	for colJ :=0; colJ<10; colJ++{
 		serial := strconv.Itoa(colJ+1)
@@ -440,7 +439,7 @@ func main() {
 		pdf.CellFormat(colWd, 6, "aa2", "1", 0, "CM", false, 0, "")
 		pdf.CellFormat(colWd, 6, "aa3", "1", 0, "CM", false, 0, "")
 		pdf.CellFormat(colWd, 6, "aa4", "1", 0, "CM", false, 0, "")
-		//pdf.SetTextColor(224, 224, 224)
+
 		pdf.SetFillColor(0, 128, 0)
 		pdf.CellFormat(colWd, 6, "aa4", "1", 0, "CM", true, 0, "")
 		pdf.Ln(-1)
@@ -448,29 +447,20 @@ func main() {
 
 	pdf.Ln(-1)
 
+	var lineNumber float64
+	lineNumber = 7.0
+    //测试 7行
+    var testWidth float64
+	testWidth = 150/lineNumber
+	pdf.SetX((210 - testWidth*lineNumber) / 2)
+	pdf.CellFormat(testWidth, 6, "aa2", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(testWidth, 6, "aa2", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(testWidth, 6, "aa3", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(testWidth, 6, "aa4", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(testWidth, 6, "aa4", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(testWidth, 6, "aa4", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(testWidth, 6, "aa4", "1", 0, "CM", false, 0, "")
 
-
-
-
-	//
-	//titleStr := "20000 Leagues Under the Seas"
-	//pdf.SetHeaderFunc(func() {
-	//	// Arial bold 15
-	//	pdf.SetFont("Arial", "B", 15)
-	//	// Calculate width of title and position
-	//	wd := pdf.GetStringWidth(titleStr) + 6
-	//	pdf.SetX((210 - wd) / 2)
-	//	// Colors of frame, background and text
-	//	pdf.SetDrawColor(0, 80, 180)
-	//	pdf.SetFillColor(230, 230, 0)
-	//	pdf.SetTextColor(220, 50, 50)
-	//	// Thickness of frame (1 mm)
-	//	pdf.SetLineWidth(1)
-	//	// Title
-	//	pdf.CellFormat(wd, 9, titleStr, "1", 1, "C", true, 0, "")
-	//	// Line break
-	//	pdf.Ln(10)
-	//})
 
 	pdf.OutputFileAndClose(filePath)
 
