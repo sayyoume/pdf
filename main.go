@@ -1,10 +1,16 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/jung-kurt/gofpdf"
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/tidwall/gjson"
+	"gopkg.in/ini.v1"
+	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -18,330 +24,112 @@ func GetCurrentPath() string {
 	//return strings.Replace(dir, "\\", "/", -1)
 }
 
-func loremList() []string {
-	return []string{
-		"Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod " +
-			"tempor incididunt ut labore et dolore magna aliqua.",
-		"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut " +
-			"aliquip ex ea commodo consequat.",
-		"Duis aute irure dolor in reprehenderit in voluptate velit esse cillum " +
-			"dolore eu fugiat nulla pariatur.",
-		"Excepteur sint occaecat cupidatat non proident, sunt in culpa qui " +
-			"officia deserunt mollit anim id est laborum.",
-	}
+
+type STDetail struct {
+	worknumber		string  //工单编号
+	porductname     string  //产品名字
+	producttype     string  //产品类型
+	productPN       string  //产品品号
+	productserial   string  //产品序列号
+	testresult      string  //测试结果1
+	testresult2     string  //测试结果2
+	testresult3     string  //测试结果3
+	testTime        string  //测试时间
 }
 
-func getPdfName() string{
-	path := GetCurrentPath()
-	pdfPath := path + "\\hello.pdf"
-	pdfPath ="g:\\2222222.pdf"
-	os.Remove(pdfPath)
-	return pdfPath
+type  STDataWorkNum struct {
+	worknumber		string //工单编号
+	producttype		string //产品型号
+	productname		string //产品名称
+	productnum		string //生产数量
+	completenumb	string //完成数量
+	passrate		string //通过率
+	workstate		string //工单状态
+	startTime		string //开始时间
+	endTime			string //结束时间
+	remoteupdate	string //远程更新
 }
-//func ExampleFpdf_CellFormat_tables() {
-//	pdf := gofpdf.New("P", "mm", "A4", "")
-//	type countryType struct {
-//		nameStr, capitalStr, areaStr, popStr string
-//	}
-//	countryList := make([]countryType, 0, 8)
-//	header := []string{"Country", "Capital", "Area (sq km)", "Pop. (thousands)"}
-//	loadData := func(fileStr string) {
-//		fl, err := os.Open(fileStr)
-//		if err == nil {
-//			scanner := bufio.NewScanner(fl)
-//			var c countryType
-//			for scanner.Scan() {
-//				// Austria;Vienna;83859;8075
-//				lineStr := scanner.Text()
-//				list := strings.Split(lineStr, ";")
-//				if len(list) == 4 {
-//					c.nameStr = list[0]
-//					c.capitalStr = list[1]
-//					c.areaStr = list[2]
-//					c.popStr = list[3]
-//					countryList = append(countryList, c)
-//				} else {
-//					err = fmt.Errorf("error tokenizing %s", lineStr)
-//				}
-//			}
-//			fl.Close()
-//			if len(countryList) == 0 {
-//				err = fmt.Errorf("error loading data from %s", fileStr)
-//			}
-//		}
-//		if err != nil {
-//			pdf.SetError(err)
-//		}
-//	}
-//	// Simple table
-//	basicTable := func() {
-//		left := (210.0 - 4*40) / 2
-//		pdf.SetX(left)
-//		for _, str := range header {
-//			pdf.CellFormat(40, 7, str, "1", 0, "", false, 0, "")
-//		}
-//		pdf.Ln(-1)
-//		for _, c := range countryList {
-//			pdf.SetX(left)
-//			pdf.CellFormat(40, 6, c.nameStr, "1", 0, "", false, 0, "")
-//			pdf.CellFormat(40, 6, c.capitalStr, "1", 0, "", false, 0, "")
-//			pdf.CellFormat(40, 6, c.areaStr, "1", 0, "", false, 0, "")
-//			pdf.CellFormat(40, 6, c.popStr, "1", 0, "", false, 0, "")
-//			pdf.Ln(-1)
-//		}
-//	}
-//	// Better table
-//	improvedTable := func() {
-//		// Column widths
-//		w := []float64{40.0, 35.0, 40.0, 45.0}
-//		wSum := 0.0
-//		for _, v := range w {
-//			wSum += v
-//		}
-//		left := (210 - wSum) / 2
-//		// 	Header
-//		pdf.SetX(left)
-//		for j, str := range header {
-//			pdf.CellFormat(w[j], 7, str, "1", 0, "C", false, 0, "")
-//		}
-//		pdf.Ln(-1)
-//		// Data
-//		for _, c := range countryList {
-//			pdf.SetX(left)
-//			pdf.CellFormat(w[0], 6, c.nameStr, "LR", 0, "", false, 0, "")
-//			pdf.CellFormat(w[1], 6, c.capitalStr, "LR", 0, "", false, 0, "")
-//			pdf.CellFormat(w[2], 6, strDelimit(c.areaStr, ",", 3),
-//				"LR", 0, "R", false, 0, "")
-//			pdf.CellFormat(w[3], 6, strDelimit(c.popStr, ",", 3),
-//				"LR", 0, "R", false, 0, "")
-//			pdf.Ln(-1)
-//		}
-//		pdf.SetX(left)
-//		pdf.CellFormat(wSum, 0, "", "T", 0, "", false, 0, "")
-//	}
-//	// Colored table
-//	fancyTable := func() {
-//		// Colors, line width and bold font
-//		pdf.SetFillColor(255, 0, 0)
-//		pdf.SetTextColor(255, 255, 255)
-//		pdf.SetDrawColor(128, 0, 0)
-//		pdf.SetLineWidth(.3)
-//		pdf.SetFont("", "B", 0)
-//		// 	Header
-//		w := []float64{40, 35, 40, 45}
-//		wSum := 0.0
-//		for _, v := range w {
-//			wSum += v
-//		}
-//		left := (210 - wSum) / 2
-//		pdf.SetX(left)
-//		for j, str := range header {
-//			pdf.CellFormat(w[j], 7, str, "1", 0, "C", true, 0, "")
-//		}
-//		pdf.Ln(-1)
-//		// Color and font restoration
-//		pdf.SetFillColor(224, 235, 255)
-//		pdf.SetTextColor(0, 0, 0)
-//		pdf.SetFont("", "", 0)
-//		// 	Data
-//		fill := false
-//		for _, c := range countryList {
-//			pdf.SetX(left)
-//			pdf.CellFormat(w[0], 6, c.nameStr, "LR", 0, "", fill, 0, "")
-//			pdf.CellFormat(w[1], 6, c.capitalStr, "LR", 0, "", fill, 0, "")
-//			pdf.CellFormat(w[2], 6, strDelimit(c.areaStr, ",", 3),
-//				"LR", 0, "R", fill, 0, "")
-//			pdf.CellFormat(w[3], 6, strDelimit(c.popStr, ",", 3),
-//				"LR", 0, "R", fill, 0, "")
-//			pdf.Ln(-1)
-//			fill = !fill
-//		}
-//		pdf.SetX(left)
-//		pdf.CellFormat(wSum, 0, "", "T", 0, "", false, 0, "")
-//	}
-//	loadData(example.TextFile("countries.txt"))
-//	pdf.SetFont("Arial", "", 14)
-//	pdf.AddPage()
-//	basicTable()
-//	pdf.AddPage()
-//	improvedTable()
-//	pdf.AddPage()
-//	fancyTable()
-//	filePath := getPdfName()
-//	pdf.OutputFileAndClose(filePath)
-//
-//	// Output:
-//	// Successfully generated pdf/Fpdf_CellFormat_tables.pdf
-//}
-
-
-
-func ExampleFpdf_SplitLines_tables() {
-	const (
-		colCount = 3
-		colWd    = 60.0
-		marginH  = 15.0
-		lineHt   = 5.5
-		cellGap  = 2.0
-	)
-	// var colStrList [colCount]string
-	type cellType struct {
-		str  string
-		list [][]byte
-		ht   float64
-	}
-	var (
-		cellList [colCount]cellType
-		cell     cellType
-	)
-
-	pdf := gofpdf.New("P", "mm", "A4", "") // 210 x 297
-	header := [colCount]string{"Column A", "Column B", "Column C"}
-	alignList := [colCount]string{"L", "C", "R"}
-	strList := loremList()
-	pdf.SetMargins(marginH, 15, marginH)
-	pdf.SetFont("Arial", "", 14)
-	pdf.AddPage()
-
-	// Headers
-	pdf.SetTextColor(224, 224, 224)
-	pdf.SetFillColor(64, 64, 64)
-	for colJ := 0; colJ < colCount; colJ++ {
-		pdf.CellFormat(colWd, 10, header[colJ], "1", 0, "CM", true, 0, "")
-	}
-	pdf.Ln(-1)
-	pdf.SetTextColor(24, 24, 24)
-	pdf.SetFillColor(255, 255, 255)
-
-	// Rows
-	y := pdf.GetY()
-	count := 0
-	for rowJ := 0; rowJ < 2; rowJ++ {
-		maxHt := lineHt
-		// Cell height calculation loop
-		for colJ := 0; colJ < colCount; colJ++ {
-			count++
-			if count > len(strList) {
-				count = 1
-			}
-			cell.str = strings.Join(strList[0:count], " ")
-			cell.list = pdf.SplitLines([]byte(cell.str), colWd-cellGap-cellGap)
-			cell.ht = float64(len(cell.list)) * lineHt
-			if cell.ht > maxHt {
-				maxHt = cell.ht
-			}
-			cellList[colJ] = cell
-		}
-		// Cell render loop
-		x := marginH
-		for colJ := 0; colJ < colCount; colJ++ {
-			pdf.Rect(x, y, colWd, maxHt+cellGap+cellGap, "D")
-			cell = cellList[colJ]
-			cellY := y + cellGap + (maxHt-cell.ht)/2
-			for splitJ := 0; splitJ < len(cell.list); splitJ++ {
-				pdf.SetXY(x+cellGap, cellY)
-				pdf.CellFormat(colWd-cellGap-cellGap, lineHt, string(cell.list[splitJ]), "", 0,
-					alignList[colJ], false, 0, "")
-				cellY += lineHt
-			}
-			x += colWd
-		}
-		y += maxHt + cellGap + cellGap
-	}
-
-
-	//////////////////
-	type countryType struct {
-		nameStr, capitalStr, areaStr, popStr string
-	}
-	countryList := make([]countryType, 0, 8)
-	header1 := []string{"Country", "Capital", "Area (sq km)", "Pop. (thousands)"}
-	// Simple table
-	basicTable := func() {
-		left := (210.0 - 4*40) / 2
-		pdf.SetX(left)
-		for _, str := range header1 {
-			pdf.CellFormat(40, 7, str, "1", 0, "", false, 0, "")
-		}
-		pdf.Ln(-1)
-		for _, c := range countryList {
-			pdf.SetX(left)
-			pdf.CellFormat(40, 6, c.nameStr, "1", 0, "", false, 0, "")
-			pdf.CellFormat(40, 6, c.capitalStr, "1", 0, "", false, 0, "")
-			pdf.CellFormat(40, 6, c.areaStr, "1", 0, "", false, 0, "")
-			pdf.CellFormat(40, 6, c.popStr, "1", 0, "", false, 0, "")
-			pdf.Ln(-1)
-		}
-	}
-	pdf.SetFont("Arial", "", 14)
-	basicTable()
-	pdf.AddPage()
-
-	filePath := getPdfName()
-	pdf.OutputFileAndClose(filePath)
-
-	// Output:
-	// Successfully generated pdf/Fpdf_SplitLines_tables.pdf
-}
-
-func ExampleFpdf_MultiCell() {
-	filePath := "g:\\hello111.pdf"
-	os.Remove(filePath)
-	pdf := gofpdf.New("P", "mm", "A4", "")
-	titleStr := "20000 Leagues Under the Seas"
-	pdf.SetTitle(titleStr, false)
-	pdf.SetAuthor("Jules Verne", false)
-	pdf.SetHeaderFunc(func() {
-		// Arial bold 15
-		pdf.SetFont("Arial", "B", 15)
-		// Calculate width of title and position
-		wd := pdf.GetStringWidth(titleStr) + 6
-		pdf.SetX((210 - wd) / 2)
-		// Colors of frame, background and text
-		pdf.SetDrawColor(0, 80, 180)
-		pdf.SetFillColor(230, 230, 0)
-		pdf.SetTextColor(220, 50, 50)
-		// Thickness of frame (1 mm)
-		pdf.SetLineWidth(1)
-		// Title
-		pdf.CellFormat(wd, 9, titleStr, "1", 1, "C", true, 0, "")
-		// Line break
-		pdf.Ln(10)
-	})
-	pdf.SetFooterFunc(func() {
-		// Position at 1.5 cm from bottom
-		pdf.SetY(-15)
-		// Arial italic 8
-		pdf.SetFont("Arial", "I", 8)
-		// Text color in gray
-		pdf.SetTextColor(128, 128, 128)
-		// Page number
-		pdf.CellFormat(0, 10, fmt.Sprintf("Page %d", pdf.PageNo()),
-			"", 0, "C", false, 0, "")
-	})
-
-
-	pdf.OutputFileAndClose(filePath)
-
-}
-
-
 
 func main() {
+	//当前目录
+	path := GetCurrentPath()
+
+	//加载sqllite
+	sqlpath := os.Getenv("LOCALAPPDATA")
+	sqlpath = sqlpath + "\\tdcsrc\\C9D1576954E8B26E8BB19A42"
+	//加载ini
+	iniPath := path + "\\config.ini"
+	cfg, errini := ini.Load(iniPath)
+	if errini != nil {
+		os.Exit(1)
+	}
+
+	//sqlite
+	db, err := sql.Open("sqlite3", sqlpath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	sql := "select worknumber,porductname,producttype,productpn,productserial,testresult,testresult2,testresult3,testtime FROM detailtb"
+	sqlId :="1"
+	sql = sql+ " where id =" + sqlId
+
+	rows, err := db.Query(sql)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var det STDetail
+	for rows.Next() {
+		err = rows.Scan(&det.worknumber, &det.porductname, &det.producttype, &det.productPN,&det.productserial, &det.testresult, &det.testresult2, &det.testresult3,&det.testTime)
+	}
+
+	timeFormat := det.testTime
+	timeFormat = strings.Replace(timeFormat, "-", "", -1)
+	timeFormat = strings.Replace(timeFormat, ":", "", -1)
+	timeFormat = strings.Replace(timeFormat, " ", "", -1)
+	pdfSavePath := cfg.Section("config").Key("pdfpath").String()
+	if pdfSavePath == ""{
+		pdfSavePath = GetCurrentPath() + "\\pdf"
+	}
+	os.Mkdir(pdfSavePath, os.ModePerm)  //创建目录
+
+	filePath := pdfSavePath + "\\" + timeFormat + ".pdf"
+	os.Remove(filePath)
+
+	//deailwork
+	sqlWork := "select worknumber,producttype,productname FROM worknumtb"
+	sqlWork = sqlWork+ " where worknumber =" + det.worknumber
+
+	rows, err = db.Query(sqlWork)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var wktb STDataWorkNum
+	for rows.Next() {
+		err = rows.Scan(&wktb.worknumber, &wktb.producttype, &wktb.productname)
+	}
+
+
+
+	//ExampleFpdf_Rect()
+	//json解析
+	fileJsonPath :="G:\\abc.txt"
+	json, _ := ioutil.ReadFile(fileJsonPath)
+
+	fileJsonPath1 := "g:\\bbb.txt"
+	json1, _:= ioutil.ReadFile(fileJsonPath1)
+
 
 	const (
 		colCount = 5
-		colWd    = 30.0
-		marginH  = 15.0
+		colWd    = 40.0
+		marginH  = 10.0
 		lineHt   = 5.5
 		cellGap  = 2.0
 	)
 
 
-	//filePath := getPdfName()
-	filePath := "g:\\hello.pdf"
-	os.Remove(filePath)
-	path := GetCurrentPath()
 
 	var pdf *gofpdf.Fpdf
 	pdf = gofpdf.New("P", "mm", "A4", "")
@@ -354,11 +142,12 @@ func main() {
 	songblod := path + "\\simsunblod.ttf"
 	pdf.AddUTF8Font("songblod","",songblod)
 
+	//设置字号
 	pdf.SetFont("chinafont", "", 20)
 	pdf.AddPage()
 
 	//标题
-	titleStr :="CJK1型号地板卡测试报告"
+	titleStr := wktb.producttype + "型" + wktb.productname + "名称"
 	wd := pdf.GetStringWidth(titleStr) + 6
 	pdf.SetX((210 - wd) / 2)
 	pdf.CellFormat(wd, 6, titleStr, "0", 0, "C", false, 0, "")
@@ -370,48 +159,52 @@ func main() {
 	pdf.SetFont("chinafont", "", 14)
 	//工号
 	pdf.SetX((210 - colWd*5) / 2)
-	pdf.CellFormat(colWd, 10, "工号", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(colWd*4, 10, "3424334", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd, 10, "工单编号", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd*4, 10, det.worknumber, "1", 0, "CM", false, 0, "")
 	pdf.Ln(-1)
 	//版序号
-	pdf.SetX((210 - colWd*5) / 2)
-	pdf.CellFormat(colWd, 10, "版序号", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(colWd*4, 10, "3424334", "1", 0, "CM", false, 0, "")
-	pdf.Ln(-1)
+	//pdf.SetX((210 - colWd*5) / 2)
+	//pdf.CellFormat(colWd, 10, "版序号", "1", 0, "CM", false, 0, "")
+	//pdf.CellFormat(colWd*4, 10, "3424334", "1", 0, "CM", false, 0, "")
+	//pdf.Ln(-1)
 
 	//产品型号
 	pdf.SetX((210 - colWd*5) / 2)
 	pdf.CellFormat(colWd, 10, "产品型号", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd*4, 10, det.productserial, "1", 0, "CM", false, 0, "")
 	pdf.Ln(-1)
 
 	//产品图号
 	pdf.SetX((210 - colWd*5) / 2)
 	pdf.CellFormat(colWd, 10, "产品图号", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(colWd, 10, "", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd*4, 10, det.productPN, "1", 0, "CM", false, 0, "")
 	pdf.Ln(-1)
 
+
 	//测试员
+	usrname := cfg.Section("config").Key("username").String()
 	pdf.SetX((210 - colWd*5) / 2)
 	pdf.CellFormat(colWd, 10, "测试员", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(colWd*4, 10, "3424334", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd*4, 10, usrname, "1", 0, "CM", false, 0, "")
 	pdf.Ln(-1)
 	//测试时间
 	pdf.SetX((210 - colWd*5) / 2)
 	pdf.CellFormat(colWd, 10, "测试时间", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(colWd*4, 10, "3424334", "1", 0, "CM", false, 0, "")
+	pdf.CellFormat(colWd*4, 10, det.testTime, "1", 0, "CM", false, 0, "")
 	pdf.Ln(-1)
+
+	titleTestResult :="测试失败"
+	isSuccess1 := gjson.Get(string(json), "result")
+	isSuccess2 := gjson.Get(string(json1), "result")
+	if isSuccess1.String() =="true" && isSuccess2.String() == "true"{
+		titleTestResult = "测试成功"
+	}
+
 	//测试结论
 	pdf.SetX((210 - colWd*5) / 2)
 	pdf.CellFormat(colWd, 10, "测试结论", "1", 0, "CM", false, 0, "")
 	pdf.SetFillColor(0, 128, 0)
-	pdf.CellFormat(colWd*4, 10, "3424334", "1", 0, "CM", true, 0, "")
+	pdf.CellFormat(colWd*4, 10, titleTestResult, "1", 0, "CM", true, 0, "")
 	pdf.Ln(-1)
 
 	pdf.SetFont("songblod", "", 16)
@@ -423,45 +216,154 @@ func main() {
 
 
 	pdf.SetFont("chinafont", "", 16)
-	header := [colCount]string{"序号", "测试内容", "正确范围", "测量值", "结果"}
+	header := [colCount]string{"序号", "测试内容", "测量值", "结果","正确范围"}
 	// Headers
 	pdf.SetX((210 - colWd*5) / 2)
 	for colJ := 0; colJ < colCount; colJ++ {
-		pdf.CellFormat(colWd, 10, header[colJ], "1", 0, "CM", false, 0, "")
+		if colJ == 0 {
+			pdf.CellFormat(colWd-15, 10, header[colJ], "1", 0, "CM", false, 0, "")
+		} else if colJ == 1 {
+			pdf.CellFormat(colWd +15, 10, header[colJ], "1", 0, "CM", false, 0, "")
+		}else{
+			pdf.CellFormat(colWd, 10, header[colJ], "1", 0, "CM", false, 0, "")
+		}
+
 	}
 	pdf.Ln(-1)
+
+
+	//json电压测试
+	//==========================================
+	//==========================================
+	pdf.SetFont("chinafont", "", 12)
+	result := gjson.Get(string(json), "data")
+	nRetRow1 :=0
+	result.ForEach(func(key, value gjson.Result) bool {
+		//fmt.Println(key.String())
+		var nCount int
+		value.ForEach(func(key1, value1 gjson.Result) bool {
+			nCount++
+			return true
+		})
+		fmt.Println(nCount)
+		nRetRow1++
+		serial := strconv.Itoa(nRetRow1)
+		pdf.SetX((210 - colWd*5) / 2)
+		pdf.CellFormat(colWd-15, 6, serial, "1", 0, "CM", false, 0, "")//序号
+
+
+		//numbers := make(map[string] string, 3)
+		nFormat :=1
+		value.ForEach(func(key1, value1 gjson.Result) bool {
+			if nFormat==1{
+				pdf.CellFormat(colWd+15, 6, value1.String(), "1", 0, "CM", false, 0, "")//测试内容
+			} else if nFormat==2 {
+				pdf.CellFormat(colWd, 6, value1.String(), "1", 0, "CM", false, 0, "")//测量值
+			} else if nFormat==3 {
+				pdf.SetFillColor(0, 128, 0)
+				pdf.CellFormat(colWd, 6, value1.String(), "1", 0, "CM", true, 0, "")//结果
+			}
+			nFormat++
+			return true
+		})
+		pdf.CellFormat(colWd, 6, "0.1-1.0", "1", 0, "CM", false, 0, "")//正确范围
+		pdf.Ln(-1)
+		return true // keep iterating
+	})
+	//========================================
+	//==========================================
+
+
+	//功能测试========================================
+	pdf.SetFont("songblod", "", 16)
+	gntitle := "功能测试"
+	gntitlewd := pdf.GetStringWidth(gntitle) + 6
+	pdf.SetX((210 - gntitlewd) / 2)
+	pdf.CellFormat(gntitlewd, 10, gntitle, "0", 0, "CM", false, 0, "")
+	pdf.Ln(-1)
+
+	//表头
+	pdf.SetFont("chinafont", "", 8)
+	resultHeader2 := gjson.Get(string(json1), "data")
+	resultHeader2.ForEach(func(key, value gjson.Result) bool {
+		//fmt.Println(key.String())
+		var nCount float64
+		value.ForEach(func(key1, value1 gjson.Result) bool {
+			nCount++
+			return true
+		})
+
+		var testWidth float64
+		testWidth = 200/nCount
+		pdf.SetX((210 - testWidth*nCount) / 2)
+
+		value.ForEach(func(key1, value1 gjson.Result) bool {
+			pdf.CellFormat(testWidth, 6, key1.String(), "1", 0, "CM", false, 0, "")
+			return true
+		})
+		pdf.Ln(-1)
+		return false //keep iterating
+	})
 
 	//内容
-	for colJ :=0; colJ<10; colJ++{
-		serial := strconv.Itoa(colJ+1)
-		pdf.SetX((210 - colWd*5) / 2)
-		pdf.CellFormat(colWd, 6, serial, "1", 0, "CM", false, 0, "")
-		pdf.CellFormat(colWd, 6, "aa2", "1", 0, "CM", false, 0, "")
-		pdf.CellFormat(colWd, 6, "aa3", "1", 0, "CM", false, 0, "")
-		pdf.CellFormat(colWd, 6, "aa4", "1", 0, "CM", false, 0, "")
+	result2 := gjson.Get(string(json1), "data")
+	result2.ForEach(func(key, value gjson.Result) bool {
+		//fmt.Println(key.String())
+		var nCount float64
+		value.ForEach(func(key1, value1 gjson.Result) bool {
+			nCount++
+			return true
+		})
 
-		pdf.SetFillColor(0, 128, 0)
-		pdf.CellFormat(colWd, 6, "aa4", "1", 0, "CM", true, 0, "")
-		pdf.Ln(-1)
-	}
+		//计算每列宽度
+		var testWidth float64
+		testWidth = 200/nCount
 
-	pdf.Ln(-1)
 
-	var lineNumber float64
-	lineNumber = 7.0
-    //测试 7行
-    var testWidth float64
-	testWidth = 150/lineNumber
-	pdf.SetX((210 - testWidth*lineNumber) / 2)
-	pdf.CellFormat(testWidth, 6, "aa2", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(testWidth, 6, "aa2", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(testWidth, 6, "aa3", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(testWidth, 6, "aa4", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(testWidth, 6, "aa4", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(testWidth, 6, "aa4", "1", 0, "CM", false, 0, "")
-	pdf.CellFormat(testWidth, 6, "aa4", "1", 0, "CM", false, 0, "")
+		//计算行高
+		_, pageh := pdf.GetPageSize()
+		_,_, _, mbottom := pdf.GetMargins()
+
+		curx, y := pdf.GetXY()
+		x := curx-marginH/2
+
+		height := 0.
+		_, lineHt := pdf.GetFontSize()
+
+
+		value.ForEach(func(key1, value1 gjson.Result) bool {
+			lines := pdf.SplitLines([]byte(value1.String()), testWidth)
+			h := float64(len(lines))*lineHt + cellGap*float64(len(lines))
+			if h > height {
+				height = h
+			}
+			return true
+		})
+
+
+
+		//如果大于页的底部，就增加一页
+		if pdf.GetY()+height > pageh-mbottom {
+			pdf.AddPage()
+			y = pdf.GetY()
+		}
+
+		//填充
+		pdf.SetX((210 - testWidth*nCount) / 2)
+		value.ForEach(func(key1, value1 gjson.Result) bool {
+			pdf.Rect(x, y, testWidth, height, "")
+			pdf.MultiCell(testWidth, lineHt+cellGap, value1.String(), "", "CM", false)
+			x += testWidth
+			pdf.SetXY(x, y)
+			return true
+		})
+		pdf.SetXY(curx, y+height)
+		return true //keep iterating
+	})
 
 
 	pdf.OutputFileAndClose(filePath)
+	cmd := exec.Command("cmd.exe", "/c", "start "+filePath)
+	cmd.Run()
 
 }

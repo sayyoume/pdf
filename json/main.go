@@ -18,17 +18,18 @@ func main() {
 	result.ForEach(func(key, value gjson.Result) bool {
 		//fmt.Println(key.String())
 
-		nCount := len(value.Raw)
+		//nCount := len(value.Raw)
 		//nCount := len(value.Array())
-		fmt.Println(nCount)
+		//fmt.Println(nCount)
 
-
+		fmt.Println("=============start")
 		value.ForEach(func(key1, value1 gjson.Result) bool {
-			fmt.Println(key1.String())
-			fmt.Println(value1.String())
+			//fmt.Println(key1.String())
+			//fmt.Println(value1.String())
+			fmt.Println("=============center=============")
 			return true
 		})
-
+		fmt.Println("=============end")
 		return true // keep iterating
 	})
 }
