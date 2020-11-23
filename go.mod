@@ -8,5 +8,7 @@ require (
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/tealeg/xlsx v1.0.5
 	github.com/tidwall/gjson v1.6.3
+	github.com/unidoc/unioffice v1.7.0
+	golang.org/x/text v0.3.0
 	gopkg.in/ini.v1 v1.62.0
 )

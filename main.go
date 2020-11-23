@@ -2,12 +2,13 @@ package main
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 	"github.com/jung-kurt/gofpdf"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tidwall/gjson"
+	"golang.org/x/text/encoding/simplifiedchinese"
 	"gopkg.in/ini.v1"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -24,6 +25,36 @@ func GetCurrentPath() string {
 	//return strings.Replace(dir, "\\", "/", -1)
 }
 
+type Charset string
+
+const (
+	UTF8    = Charset("UTF-8")
+	GB18030 = Charset("GB18030")
+	GBK = Charset("gbk")
+	HZGB2312 = Charset("HZGB2312")
+)
+
+func ConvertByte2String(byte []byte, charset Charset) string {
+
+	var str string
+	switch charset {
+	case GB18030:
+		var decodeBytes,_=simplifiedchinese.GB18030.NewDecoder().Bytes(byte)
+		str= string(decodeBytes)
+	case GBK:
+		var decodeBytes,_=simplifiedchinese.GBK.NewDecoder().Bytes(byte)
+		str= string(decodeBytes)
+	case HZGB2312:
+		var decodeBytes,_=simplifiedchinese.HZGB2312.NewDecoder().Bytes(byte)
+		str= string(decodeBytes)
+	case UTF8:
+		fallthrough
+	default:
+		str = string(byte)
+	}
+
+	return str
+}
 
 type STDetail struct {
 	worknumber		string  //工单编号
@@ -51,6 +82,7 @@ type  STDataWorkNum struct {
 }
 
 func main() {
+
 	//当前目录
 	path := GetCurrentPath()
 
@@ -59,21 +91,25 @@ func main() {
 	sqlpath = sqlpath + "\\tdcsrc\\C9D1576954E8B26E8BB19A42"
 	//加载ini
 	iniPath := path + "\\config.ini"
-	cfg, errini := ini.Load(iniPath)
-	if errini != nil {
-		os.Exit(1)
+	cfg, err := ini.Load(iniPath)
+	if err != nil {
+		fmt.Println("====================")
+		fmt.Println(err)
+		fmt.Println("====================")
 	}
 
 	//sqlite
 	db, err := sql.Open("sqlite3", sqlpath)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("load sqlite3 error")
 	}
 	defer db.Close()
 
+	selId := os.Args[1]
+	//selId := "1"
 	sql := "select worknumber,porductname,producttype,productpn,productserial,testresult,testresult2,testresult3,testtime FROM detailtb"
-	sqlId :="1"
-	sql = sql+ " where id =" + sqlId
+
+	sql = sql+ " where id =" + selId
 
 	rows, err := db.Query(sql)
 	if err != nil {
@@ -95,7 +131,7 @@ func main() {
 	os.Mkdir(pdfSavePath, os.ModePerm)  //创建目录
 
 	filePath := pdfSavePath + "\\" + timeFormat + ".pdf"
-	os.Remove(filePath)
+
 
 	//deailwork
 	sqlWork := "select worknumber,producttype,productname FROM worknumtb"
@@ -110,16 +146,24 @@ func main() {
 		err = rows.Scan(&wktb.worknumber, &wktb.producttype, &wktb.productname)
 	}
 
+	//test1
+	decoded, err := base64.StdEncoding.DecodeString(det.testresult)
+	json := string(decoded)
 
+	//var data []byte = []byte(json)
+	//json = ConvertByte2String(data,GB18030)
 
-	//ExampleFpdf_Rect()
-	//json解析
-	fileJsonPath :="G:\\abc.txt"
-	json, _ := ioutil.ReadFile(fileJsonPath)
+	//test2
+	decoded2, err := base64.StdEncoding.DecodeString(det.testresult2)
+	json2 := string(decoded2)
+	//var data2 []byte = []byte(json2)
+	//json2 = ConvertByte2String(data2,GB18030)
 
-	fileJsonPath1 := "g:\\bbb.txt"
-	json1, _:= ioutil.ReadFile(fileJsonPath1)
-
+	//test3
+	decoded3, err := base64.StdEncoding.DecodeString(det.testresult3)
+	json3 := string(decoded3)
+	//var data3 []byte = []byte(json3)
+	//json3 = ConvertByte2String(data3,GB18030)
 
 	const (
 		colCount = 5
@@ -195,7 +239,7 @@ func main() {
 
 	titleTestResult :="测试失败"
 	isSuccess1 := gjson.Get(string(json), "result")
-	isSuccess2 := gjson.Get(string(json1), "result")
+	isSuccess2 := gjson.Get(string(json3), "result")
 	if isSuccess1.String() =="true" && isSuccess2.String() == "true"{
 		titleTestResult = "测试成功"
 	}
@@ -216,7 +260,7 @@ func main() {
 
 
 	pdf.SetFont("chinafont", "", 16)
-	header := [colCount]string{"序号", "测试内容", "测量值", "结果","正确范围"}
+	header := [colCount]string{"序号", "测试内容", "结果","测量值","正确范围"}
 	// Headers
 	pdf.SetX((210 - colWd*5) / 2)
 	for colJ := 0; colJ < colCount; colJ++ {
@@ -234,105 +278,22 @@ func main() {
 
 	//json电压测试
 	//==========================================
-	//==========================================
 	pdf.SetFont("chinafont", "", 12)
 	result := gjson.Get(string(json), "data")
 	nRetRow1 :=0
 	result.ForEach(func(key, value gjson.Result) bool {
-		//fmt.Println(key.String())
-		var nCount int
-		value.ForEach(func(key1, value1 gjson.Result) bool {
-			nCount++
-			return true
-		})
-		fmt.Println(nCount)
 		nRetRow1++
 		serial := strconv.Itoa(nRetRow1)
-		pdf.SetX((210 - colWd*5) / 2)
-		pdf.CellFormat(colWd-15, 6, serial, "1", 0, "CM", false, 0, "")//序号
-
-
-		//numbers := make(map[string] string, 3)
-		nFormat :=1
-		value.ForEach(func(key1, value1 gjson.Result) bool {
-			if nFormat==1{
-				pdf.CellFormat(colWd+15, 6, value1.String(), "1", 0, "CM", false, 0, "")//测试内容
-			} else if nFormat==2 {
-				pdf.CellFormat(colWd, 6, value1.String(), "1", 0, "CM", false, 0, "")//测量值
-			} else if nFormat==3 {
-				pdf.SetFillColor(0, 128, 0)
-				pdf.CellFormat(colWd, 6, value1.String(), "1", 0, "CM", true, 0, "")//结果
-			}
-			nFormat++
-			return true
-		})
-		pdf.CellFormat(colWd, 6, "0.1-1.0", "1", 0, "CM", false, 0, "")//正确范围
-		pdf.Ln(-1)
-		return true // keep iterating
-	})
-	//========================================
-	//==========================================
-
-
-	//功能测试========================================
-	pdf.SetFont("songblod", "", 16)
-	gntitle := "功能测试"
-	gntitlewd := pdf.GetStringWidth(gntitle) + 6
-	pdf.SetX((210 - gntitlewd) / 2)
-	pdf.CellFormat(gntitlewd, 10, gntitle, "0", 0, "CM", false, 0, "")
-	pdf.Ln(-1)
-
-	//表头
-	pdf.SetFont("chinafont", "", 8)
-	resultHeader2 := gjson.Get(string(json1), "data")
-	resultHeader2.ForEach(func(key, value gjson.Result) bool {
-		//fmt.Println(key.String())
-		var nCount float64
-		value.ForEach(func(key1, value1 gjson.Result) bool {
-			nCount++
-			return true
-		})
-
-		var testWidth float64
-		testWidth = 200/nCount
-		pdf.SetX((210 - testWidth*nCount) / 2)
-
-		value.ForEach(func(key1, value1 gjson.Result) bool {
-			pdf.CellFormat(testWidth, 6, key1.String(), "1", 0, "CM", false, 0, "")
-			return true
-		})
-		pdf.Ln(-1)
-		return false //keep iterating
-	})
-
-	//内容
-	result2 := gjson.Get(string(json1), "data")
-	result2.ForEach(func(key, value gjson.Result) bool {
-		//fmt.Println(key.String())
-		var nCount float64
-		value.ForEach(func(key1, value1 gjson.Result) bool {
-			nCount++
-			return true
-		})
-
-		//计算每列宽度
-		var testWidth float64
-		testWidth = 200/nCount
-
-
 		//计算行高
-		_, pageh := pdf.GetPageSize()
-		_,_, _, mbottom := pdf.GetMargins()
-
 		curx, y := pdf.GetXY()
 		x := curx-marginH/2
-
+		fmt.Printf("GetY=%f\n",y)
 		height := 0.
 		_, lineHt := pdf.GetFontSize()
 
-
+		testWidth :=colWd
 		value.ForEach(func(key1, value1 gjson.Result) bool {
-			lines := pdf.SplitLines([]byte(value1.String()), testWidth)
+			lines := pdf.SplitLines([]byte(value1.String()), testWidth+15)
 			h := float64(len(lines))*lineHt + cellGap*float64(len(lines))
 			if h > height {
 				height = h
@@ -340,8 +301,8 @@ func main() {
 			return true
 		})
 
-
-
+		_, pageh := pdf.GetPageSize()
+		_,_, _, mbottom := pdf.GetMargins()
 		//如果大于页的底部，就增加一页
 		if pdf.GetY()+height > pageh-mbottom {
 			pdf.AddPage()
@@ -349,19 +310,173 @@ func main() {
 		}
 
 		//填充
-		pdf.SetX((210 - testWidth*nCount) / 2)
+		pdf.SetX((210 - colWd*5) / 2)
+		pdf.Rect(x, y, colWd-15, height, "")
+		pdf.MultiCell(colWd-15, lineHt+cellGap, serial, "", "CM", false)
+		//fmt.Printf("top=%f,bottom=%f\n",y,y+height)
+		x = x+colWd-15
+		nFormat :=1
 		value.ForEach(func(key1, value1 gjson.Result) bool {
-			pdf.Rect(x, y, testWidth, height, "")
-			pdf.MultiCell(testWidth, lineHt+cellGap, value1.String(), "", "CM", false)
-			x += testWidth
-			pdf.SetXY(x, y)
+			if nFormat==1{
+				pdf.SetXY(x, y)
+				pdf.Rect(x, y, colWd+15, height, "")
+				pdf.MultiCell(colWd+15, lineHt+cellGap, value1.String(), "", "CM", false)
+			}
+			if nFormat==2{
+				pdf.SetFillColor(0, 128, 0)
+				//pdf.SetLineWidth(0.1)
+				x = x+15
+				pdf.SetXY(x, y)
+				pdf.Rect(x, y, colWd, height, "")
+				pdf.CellFormat(colWd, height, value1.String(), "1", 0, "CM", true, 0, "")
+				//pdf.MultiCell(colWd, lineHt+cellGap, value1.String(), "", "CM", true)
+			}
+			if nFormat==3{
+
+				//pdf.SetLineWidth(1)
+				//pdf.SetDrawColor(0, 128,0)
+				pdf.SetXY(x, y)
+				pdf.Rect(x, y, colWd, height, "")
+				//pdf.CellFormat(colWd, height, "", "1", 0, "CM", true, 0, "")//结果
+				pdf.MultiCell(colWd, lineHt+cellGap, value1.String(), "", "CM", false)
+			}
+			//fmt.Printf("left=%f,right=%f\n",x,x+colWd)
+			nFormat++
+			x += colWd
 			return true
 		})
+		pdf.SetXY(x, y)
+		pdf.Rect(x, y, colWd, height, "")
+		pdf.MultiCell(colWd, lineHt+cellGap, "0.1-1.0", "", "CM", false)
 		pdf.SetXY(curx, y+height)
-		return true //keep iterating
+
+		//fmt.Printf("curx=%f,curxy=%f\n",y,y+height)
+		//pdf.Ln(-1)
+		return true
 	})
 
+	if len(json2) >0{
+		//程序烧录
+		pdf.SetFont("songblod", "", 16)
+		shaolu := "程序烧录"
+		shaoluwd := pdf.GetStringWidth(shaolu) + 6
+		pdf.SetX((210 - shaoluwd) / 2)
+		pdf.CellFormat(shaoluwd, 10, shaolu, "0", 0, "CM", false, 0, "")
+		pdf.Ln(-1)
 
+		pdf.SetFont("chinafont", "", 16)
+		pdf.SetX((210 - colWd*5) / 2)
+		pdf.CellFormat(colWd, 10, "测试内容", "1", 0, "CM", false, 0, "")
+		pdf.CellFormat(colWd*4, 10, "结果", "1", 0, "CM", false, 0, "")
+		pdf.Ln(-1)
+
+		pdf.SetFont("chinafont", "", 10)
+
+		resulshaolu := gjson.Get(string(json2), "data")
+		nShaolu :=1
+		resulshaolu.ForEach(func(key, value gjson.Result) bool {
+			pdf.SetX((210 - colWd*5) / 2)
+			if nShaolu ==1{
+				pdf.CellFormat(colWd, 10, "CPU1", "1", 0, "CM", false, 0, "")
+			}
+			if nShaolu ==2{
+				pdf.CellFormat(colWd, 10, "CPU2", "1", 0, "CM", false, 0, "")
+			}
+			pdf.SetFillColor(0, 128, 0)
+			pdf.CellFormat(colWd*4, 10, value.String(), "1", 0, "CM", true, 0, "")
+			pdf.Ln(-1)
+			nShaolu++
+			return true
+		})
+	}
+
+
+	if len(json3) >0{
+		//功能测试========================================
+		pdf.SetFont("songblod", "", 16)
+		gntitle := "功能测试"
+		gntitlewd := pdf.GetStringWidth(gntitle) + 6
+		pdf.SetX((210 - gntitlewd) / 2)
+		pdf.CellFormat(gntitlewd, 10, gntitle, "0", 0, "CM", false, 0, "")
+		pdf.Ln(-1)
+
+		//表头
+		pdf.SetFont("chinafont", "", 8)
+		resultHeader2 := gjson.Get(string(json3), "data")
+		resultHeader2.ForEach(func(key, value gjson.Result) bool {
+			//fmt.Println(key.String())
+			var nCount float64
+			value.ForEach(func(key1, value1 gjson.Result) bool {
+				nCount++
+				return true
+			})
+
+			var testWidth float64
+			testWidth = 200/nCount
+			pdf.SetX((210 - testWidth*nCount) / 2)
+
+			value.ForEach(func(key1, value1 gjson.Result) bool {
+				pdf.CellFormat(testWidth, 6, key1.String(), "1", 0, "CM", false, 0, "")
+				return true
+			})
+			pdf.Ln(-1)
+			return false //keep iterating
+		})
+
+		//内容
+		result2 := gjson.Get(string(json3), "data")
+		result2.ForEach(func(key, value gjson.Result) bool {
+			var nCount float64
+			value.ForEach(func(key1, value1 gjson.Result) bool {
+				nCount++
+				return true
+			})
+
+			//计算每列宽度
+			var testWidth float64
+			testWidth = 200/nCount
+
+
+			//计算行高
+			curx, y := pdf.GetXY()
+			x := curx-marginH/2
+
+			height := 0.
+			_, lineHt := pdf.GetFontSize()
+
+
+			value.ForEach(func(key1, value1 gjson.Result) bool {
+				lines := pdf.SplitLines([]byte(value1.String()), testWidth)
+				h := float64(len(lines))*lineHt + cellGap*float64(len(lines))
+				if h > height {
+					height = h
+				}
+				return true
+			})
+
+			_, pageh := pdf.GetPageSize()
+			_,_, _, mbottom := pdf.GetMargins()
+			//如果大于页的底部，就增加一页
+			if pdf.GetY()+height > pageh-mbottom {
+				pdf.AddPage()
+				y = pdf.GetY()
+			}
+
+			//填充
+			pdf.SetX((210 - testWidth*nCount) / 2)
+			value.ForEach(func(key1, value1 gjson.Result) bool {
+				pdf.Rect(x, y, testWidth, height, "")
+				pdf.MultiCell(testWidth, lineHt+cellGap, value1.String(), "", "CM", false)
+				x += testWidth
+				pdf.SetXY(x, y)
+				return true
+			})
+			pdf.SetXY(curx, y+height)
+			return true //keep iterating
+		})
+	}
+
+	os.Remove(filePath)
 	pdf.OutputFileAndClose(filePath)
 	cmd := exec.Command("cmd.exe", "/c", "start "+filePath)
 	cmd.Run()
