@@ -14,7 +14,20 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
+
+var loger *log.Logger
+func initg() {
+	t := time.Now()
+	tm := t.Format("20060102150405")
+	file := "d:\\" + tm + "_golang_log" + ".txt"
+	logFile, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0766)
+	if err != nil {
+		panic(err)
+	}
+	loger = log.New(logFile, "[INFO]", log.LstdFlags|log.Lshortfile|log.LUTC) // 将文件设置为loger作为输出
+}
 
 func GetCurrentPath() string {
 	dir, err := os.Getwd()
@@ -82,7 +95,8 @@ type  STDataWorkNum struct {
 }
 
 func main() {
-
+	initg()
+	log.Println("start")
 	//当前目录
 	path := GetCurrentPath()
 
@@ -97,6 +111,7 @@ func main() {
 		fmt.Println(err)
 		fmt.Println("====================")
 	}
+	//loger.Printf("load ini success path=%s",iniPath)
 
 	//sqlite
 	db, err := sql.Open("sqlite3", sqlpath)
@@ -106,15 +121,16 @@ func main() {
 	defer db.Close()
 
 	selId := os.Args[1]
-	//selId := "1"
+
 	sql := "select worknumber,porductname,producttype,productpn,productserial,testresult,testresult2,testresult3,testtime FROM detailtb"
 
 	sql = sql+ " where id =" + selId
 
 	rows, err := db.Query(sql)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
+
 	var det STDetail
 	for rows.Next() {
 		err = rows.Scan(&det.worknumber, &det.porductname, &det.producttype, &det.productPN,&det.productserial, &det.testresult, &det.testresult2, &det.testresult3,&det.testTime)
@@ -131,7 +147,6 @@ func main() {
 	os.Mkdir(pdfSavePath, os.ModePerm)  //创建目录
 
 	filePath := pdfSavePath + "\\" + timeFormat + ".pdf"
-
 
 	//deailwork
 	sqlWork := "select worknumber,producttype,productname FROM worknumtb"
